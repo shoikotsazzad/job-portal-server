@@ -3,7 +3,7 @@ const cors = require('cors');
 const app = express();
 require('dotenv').config();
 const port = process.env.PORT || 3000;
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 
 app.use(cors());
@@ -30,6 +30,59 @@ async function run() {
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
+
+
+        //jobs related apis
+        const jobsCollection = client.db('jobPortal').collection('jobs');
+        const jobApplicationCollection = client.db('jobPortal').collection('job-Applications');
+
+        app.get('/jobs', async (req, res) => {
+            const cursor = jobsCollection.find();
+            const result = await cursor.toArray();
+            res.send(result);
+        })
+
+
+        app.get('/jobs/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+            const result = await jobsCollection.findOne(query);
+            res.send(result);
+        })
+
+        //job application apis
+
+        app.get('/job-applications', async (req, res) => {
+            const email = req.query.email;
+            const query = { applicant_email: email }
+            const result = await jobApplicationCollection.find(query).toArray();
+
+            //Not the best way to aggregate data
+            for (const application of result) {
+                console.log(application.job_id);
+                const query2 = { _id: new ObjectId(application.job_id) }
+                const result2 = await jobsCollection.findOne(query2);
+                if(result2){
+                    application.title = result2.title;
+                    application.company = result2.company;
+                    application.location = result2.location;
+                    application.company_logo = result2.company_logo;
+                }
+            }
+
+            res.send(result);
+        })
+
+
+        app.post('/job-applications', async (req, res) => {
+            const application = req.body;
+            const result = await jobApplicationCollection.insertOne(application);
+            res.send(result);
+        })
+
+
+
+
     } finally {
         // Ensures that the client will close when you finish/error
         //await client.close();
