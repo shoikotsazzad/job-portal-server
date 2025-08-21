@@ -1,13 +1,20 @@
 const express = require('express');
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
 const app = express();
+const cookieParser = require('cookie-parser')
 require('dotenv').config();
 const port = process.env.PORT || 3000;
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 
-app.use(cors());
+app.use(cors({
+    origin: ['http://localhost:5173'],
+    credentials: true
+
+}));
 app.use(express.json());
+app.use(cookieParser());
 
 
 
@@ -30,6 +37,20 @@ async function run() {
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
+
+        //Auth Related APIs
+        app.post('/jwt', async (req, res) => {
+            const user = req.body;
+            const token = jwt.sign(user, process.env.JWT_SECRET , {expiresIn: '1h'});
+            res
+            .cookie('token', token,{
+                httpOnly: true,
+                secure: false,
+
+            }) 
+            .send({success: true});
+        })
+
 
 
         //jobs related apis
@@ -68,6 +89,9 @@ async function run() {
             if (req.query.email) {
                 query = { applicant_email: req.query.email };
             }
+
+            console.log('cookies', req.cookies)
+
             const result = await jobApplicationCollection.find(query).toArray();
 
             //Not the best way to aggregate data
