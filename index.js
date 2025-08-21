@@ -16,6 +16,27 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
+const logger = (req, res, next) =>{
+    console.log('inside the logger')
+    next();
+}
+
+const verifyToken = (req, res, next) => {
+    console.log('inside verify token middleware', req.cookies);
+    const token = req?.cookies?.token;
+    if(!token){
+        return res.status(401).send({message: 'Unauthorized token'})
+    }
+    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) =>{
+        if(err){
+            return res.status(401).send({message: 'UnAuthorized Access'})
+        }
+        req.user = decoded;
+        next();
+    })
+    
+}
+
 
 
 
@@ -57,7 +78,8 @@ async function run() {
         const jobsCollection = client.db('jobPortal').collection('jobs');
         const jobApplicationCollection = client.db('jobPortal').collection('job-Applications');
 
-        app.get('/jobs', async (req, res) => {
+        app.get('/jobs', logger,  async (req, res) => {
+            console.log('now inside the api callback')
             const email = req.query.email;
             let query = {};
             if (email) {
@@ -84,13 +106,17 @@ async function run() {
 
         //job application apis
 
-        app.get('/job-applications', async (req, res) => {
+        app.get('/job-applications', verifyToken, async (req, res) => {
             let query = {};
             if (req.query.email) {
                 query = { applicant_email: req.query.email };
             }
 
-            console.log('cookies', req.cookies)
+
+            if(req.user.email != req.query.email ){
+                return res.status(403).send({message: 'forbidden access'});
+            }
+            console.log('Cuk cuk tokoto', req.cookies)
 
             const result = await jobApplicationCollection.find(query).toArray();
 
