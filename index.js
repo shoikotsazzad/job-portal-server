@@ -9,7 +9,10 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 
 app.use(cors({
-    origin: ['http://localhost:5173'],
+    origin: [
+        'http://localhost:5173',
+        'https://job-portal-e8b8c.web.app',
+        'https://job-portal-e8b8c.firebaseapp.com'],
     credentials: true
 
 }));
@@ -54,10 +57,10 @@ const client = new MongoClient(uri, {
 async function run() {
     try {
         // Connect the client to the server	(optional starting in v4.7)
-        await client.connect();
-        // Send a ping to confirm a successful connection
-        await client.db("admin").command({ ping: 1 });
-        console.log("Pinged your deployment. You successfully connected to MongoDB!");
+        // await client.connect();
+        // // Send a ping to confirm a successful connection
+        // await client.db("admin").command({ ping: 1 });
+        // console.log("Pinged your deployment. You successfully connected to MongoDB!");
 
         //Auth Related APIs
         app.post('/jwt', async (req, res) => {
@@ -66,8 +69,9 @@ async function run() {
             res
             .cookie('token', token,{
                 httpOnly: true,
-                secure: false,
-
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: process.env.NODE_ENV === 'production' ? 'none' :
+                "strict",
             }) 
             .send({success: true});
         })
