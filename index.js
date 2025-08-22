@@ -85,11 +85,25 @@ async function run() {
         app.get('/jobs', logger,  async (req, res) => {
             console.log('now inside the api callback')
             const email = req.query.email;
+            const sort = req.query?.sort;
+            const search = req.query?.search;
+
             let query = {};
+            let sortQuery = {};
+            console.log(req.query);
             if (email) {
                 query = { hr_email: email };
             }
-            const cursor = jobsCollection.find(query);
+
+            if(sort == "true"){
+                sortQuery = {"salaryRange.min" : -1}
+            }
+
+            if(search){
+                query.location = { $regex: search, $options: "i"};
+            }
+
+            const cursor = jobsCollection.find(query).sort(sortQuery);
             const result = await cursor.toArray();
             res.send(result);
         })
